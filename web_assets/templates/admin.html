@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - {{site_title}}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Analytics Admin Panel</h1>
+
+    <p>This page provides information about the analytics dashboards and data collectors.<br />
+        It focuses on the tools and processes used to collect and analyze data, rather than the data itself.</p>
+    <hr />
+
+    <h2>Data Collectors</h2>
+    <p>The table below lists the configured data collectors and their current status.<br />
+        Data reflects activity since the server was last started.</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Module</th>
+                <th>Interval (min)</th>
+                <th>Runs Count</th>
+                <th>Collected Events</th>
+                <th>Errors Count</th>
+                <th>Error Message</th>
+                <th>Init / Last run Time</th>
+                <th>Avg Run Time (ms)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for collector in collectors %}
+            <tr>
+                <td>{{ collector.module }}</td>
+                <td>{{ collector.collect_interval_in_minutes }}</td>
+                <td>{{ collector.status.runs_count }}</td>
+                <td>{{ collector.status.collected_events }}</td>
+                <td>{{ collector.status.errors_count }}</td>
+                <td>{{ collector.status.error_message }}</td>
+                <td>{{ collector.status.last_execution_time }}</td>
+                <td>{{ collector.status.avg_execution_time_ms }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr />
+
+
+    <h2>Events Stats</h2>
+    <p>The table below lists all the events in DB and their current count.</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Count</th>
+                {% if enable_raw_events_page %}
+                <th>Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ event.name }}</td>
+                <td>{{ event.count }}</td>
+                {% if enable_raw_events_page %}
+                <td><a href="/events?name={{ event.name }}">Fetch Data</a></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr />
+
+
+    <h2>Server Logs</h2>
+    <textarea class="form-control" rows="20" readonly>
+{{ server_logs }}
+    </textarea>
+    <hr />
+
+    <h2>Security</h2>
+    {% if auth_required %}
+        <p>This section shows auth and security related stats.</p>
+        <h4>Failed Attempts Stats</h4>
+        {% if auth_manager.is_locked %}
+            <p class="alert alert-danger">The authentication manager is currently locked due to multiple failed login attempts.</p>
+            <p>
+                Unlocks At: {{ auth_manager.lock_until }}<br />
+            </p>
+        {% else %}
+            <p>
+                
+                Consecutive failed login attempts: {{ auth_manager.failed_login_attempts }} / {{ auth_manager.max_failed_attempts }}
+            </p>
+        {% endif %}
+
+        <h4>Active Sessions</h4>
+        {% if active_sessions %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Debug ID</th>
+                        <th>Created At</th>
+                        <th>Last Active At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in active_sessions %}
+                    <tr>
+                        <td>{{ session.username }}</td>
+                        <td>{{ session.debug_id }}</td>
+                        <td>{{ session.created_at }}</td>
+                        <td>{{ session.last_active_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="alert alert-info">No active logged in sessions.</p>
+        {% endif %}
+
+    {% else %}
+        <p class="alert alert-warning">Authentication is disabled. No data to show.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

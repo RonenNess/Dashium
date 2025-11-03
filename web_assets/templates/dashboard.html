@@ -1,0 +1,343 @@
+{% extends "dashboard_base.html" %}
+
+
+{% block extra_scripts %}
+
+    {% for widget in widgets %}
+        <script>
+            (function() {
+
+                console.log("Initializing widget: '{{ widget.title }}' with type '{{ widget.type }}'");
+                let foundValidType = false;
+
+                // widget instance
+                let inst = null;
+
+                // time aggregation settings
+                {% if widget.time_aggregation %}
+                    const timeAggSettings = {
+                        startingValue: `{{ widget.time_aggregation.starting_value|page_default }}`,
+                        allowSelection: {{ widget.time_aggregation.allow_selection|true }},
+                        aggregationFunction: `{{ widget.time_aggregation.aggregation_function|sum }}`,
+                    };
+                {% else %}
+                    const timeAggSettings = null;
+                {% endif %}
+
+                {% if widget.type == "line_graph" %}
+                {
+                    // lines graph widget
+                    foundValidType = true;
+
+                    // get raw styles object
+                    const True = true;
+                    const False = false;
+                    let rawStyles = {{ widget.style|null }} || {};
+                    if (!Array.isArray(rawStyles)) {
+                        rawStyles = [rawStyles];
+                    }
+
+                    // parse styles
+                    const styles = [];
+                    if (rawStyles)
+                    {
+                        for (const style of rawStyles) {
+                            styles.push({
+                                linesSmooth: style.lines_smooth,
+                                linesColor: style.lines_color,
+                                linesWidth: style.lines_width || 2,
+                                label: style.label || null,
+                                areaFill: style.area_fill || false,
+                                markline: style.markline || false
+                            });
+                        }
+                    }
+                    else {
+                        styles.push({
+                            linesSmooth: false,
+                            linesColor: '#0d6efd',
+                            linesWidth: 2,
+                            areaFill: false,
+                            markline: false
+                        });
+                    }
+
+                    // set options
+                    const options = {
+                        valuesSuffix: `{{ widget.values_suffix| }}` || null
+                    };
+
+                    // init line graph widget
+                    inst = WidgetsFactory.createLinesGraph("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                }
+                {% endif %}
+
+                {% if widget.type == "bar_graph" %}
+                {
+                    // bar graph widget
+                    foundValidType = true;
+
+                    // get raw styles object
+                    const True = true;
+                    const False = false;
+                    let rawStyles = {{ widget.style|null }} || {};
+                    if (!Array.isArray(rawStyles)) {
+                        rawStyles = [rawStyles];
+                    }
+
+                    // parse styles
+                    const styles = [];
+                    if (rawStyles)
+                    {
+                        for (const style of rawStyles) {
+                            styles.push({
+                                barColor: style.bar_color,
+                                barWidth: style.bar_width || 'auto',
+                                barGap: style.bar_gap || '20%',
+                                barCategoryGap: style.bar_category_gap || '20%',
+                                borderRadius: style.border_radius || 0,
+                                itemBorderColor: style.item_border_color,
+                                itemBorderWidth: style.item_border_width || 0,
+                                label: style.label || null,
+                                markline: style.markline || false
+                            });
+                        }
+                    }
+                    else {
+                        styles.push({
+                            barColor: '#0d6efd',
+                            barWidth: 'auto',
+                            barGap: '20%',
+                            barCategoryGap: '20%',
+                            borderRadius: 0,
+                            markline: false
+                        });
+                    }
+
+                    // set options
+                    const options = {
+                        valuesSuffix: `{{ widget.values_suffix| }}` || null
+                    };
+
+                    // init bar graph widget
+                    inst = WidgetsFactory.createBarsGraph("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                }
+                {% endif %}
+
+                {% if widget.type == "pie_chart" %}
+                {
+                    // pie chart widget
+                    foundValidType = true;
+
+                    // get raw style object
+                    const True = true;
+                    const False = false;
+                    let rawStyle = {{ widget.style|null }} || {};
+
+                    // parse style
+                    const style = {
+                        aggregationType: rawStyle.aggregation_type || 'sum',
+                        radius: rawStyle.radius || '50%',
+                        center: rawStyle.center || ['50%', '50%'],
+                        donut: rawStyle.donut || false,
+                        innerRadius: rawStyle.inner_radius || '40%',
+                        outerRadius: rawStyle.outer_radius || rawStyle.radius || '50%',
+                        showCenterText: rawStyle.show_center_text || false,
+                        centerTextFormatter: rawStyle.center_text_formatter || '{total}',
+                        centerTextSize: rawStyle.center_text_size || 24,
+                        centerTextColor: rawStyle.center_text_color || null,
+                        showLegend: rawStyle.show_legend !== false,
+                        legendOrient: rawStyle.legend_orient || 'vertical',
+                        legendPosition: rawStyle.legend_position || 'left',
+                        showLabels: rawStyle.show_labels !== false,
+                        labelPosition: rawStyle.label_position || 'outside',
+                        labelFormatter: rawStyle.label_formatter || '{b}: {c}',
+                        showLabelLines: rawStyle.show_label_lines !== false,
+                        borderWidth: rawStyle.border_width || 0,
+                        borderColor: rawStyle.border_color || '#fff',
+                        labels: rawStyle.labels || null,
+                        colors: rawStyle.colors || null
+                    };
+
+                    // init pie chart widget
+                    inst = WidgetsFactory.createPieChart("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, style);
+                }
+                {% endif %}
+
+                {% if widget.type == "scatter_map" %}
+                {
+                    // scatter map widget
+                    foundValidType = true;
+
+                    // get raw styles object
+                    const True = true;
+                    const False = false;
+                    let rawStyles = {{ widget.style|null }} || {};
+                    if (!Array.isArray(rawStyles)) {
+                        rawStyles = [rawStyles];
+                    }
+
+                    // parse styles
+                    const styles = [];
+                    if (rawStyles)
+                    {
+                        for (const style of rawStyles) {
+                            styles.push({
+                                color: style.color,
+                                symbolSize: style.symbol_size || 10,
+                                symbol: style.symbol || 'circle',
+                                borderColor: style.border_color,
+                                borderWidth: style.border_width || 0,
+                                opacity: style.opacity || 0.8,
+                                emphasisBorderColor: style.emphasis_border_color,
+                                emphasisBorderWidth: style.emphasis_border_width || 2,
+                                label: style.label || null
+                            });
+                        }
+                    }
+                    else {
+                        styles.push({
+                            color: null,
+                            symbolSize: 10,
+                            symbol: 'circle',
+                            borderColor: null,
+                            borderWidth: 0,
+                            opacity: 0.8,
+                            emphasisBorderColor: '#333',
+                            emphasisBorderWidth: 2,
+                            label: null
+                        });
+                    }
+
+                    // set options
+                    const options = {
+                        valuesSuffixX: `{{ widget.values_suffix_x| }}` || null,
+                        valuesSuffixY: `{{ widget.values_suffix_y| }}` || null,
+                        xAxisName: `{{ widget.x_axis_name|X Axis }}` || 'X Axis',
+                        yAxisName: `{{ widget.y_axis_name|Y Axis }}` || 'Y Axis',
+                        enableZoom: {{ widget.enable_zoom|true }}
+                    };
+
+                    // init scatter map widget
+                    inst = WidgetsFactory.createScatterMap("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                }
+                {% endif %}
+
+                {% if widget.type == "html_box" %}
+                {
+                    // lines graph widget
+                    foundValidType = true;
+                    inst = WidgetsFactory.createFreeHtml("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, `{{ widget.html_content|<p>Missing 'html_content' value.</p> }}`);
+                }
+                {% endif %}
+         
+                {% if widget.type == "table" %}
+                {
+                    // lines graph widget
+                    foundValidType = true;
+                    inst = WidgetsFactory.createTable("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, {{ widget.table_columns }}, {{ widget.max_rows|10 }}, {{ widget.color_rules|null }}, `{{ widget.slice_from|start }}`);
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                }
+                {% endif %}
+
+                {% if widget.type == "counter" %}
+                {
+                    // counter widget
+                    foundValidType = true;
+                    inst = WidgetsFactory.createCounter("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, "{{ widget.counter_type }}");
+                }
+                {% endif %}
+
+                {% if widget.type == "gauge" %}
+                {
+                    // gauge widget
+                    foundValidType = true;
+
+                    // get raw style object
+                    const True = true;
+                    const False = false;
+                    let rawStyle = {{ widget.style|null }} || {};
+
+                    // parse style
+                    const style = {
+                        min: rawStyle.min || 0,
+                        max: rawStyle.max || 100,
+                        gaugeColor: rawStyle.gauge_color || null,
+                        radius: rawStyle.radius || '75%',
+                        center: rawStyle.center || ['50%', '55%'],
+                        splitNumber: rawStyle.split_number || 10,
+                        startAngle: rawStyle.start_angle || 225,
+                        endAngle: rawStyle.end_angle || -45,
+                        clockwise: rawStyle.clockwise !== false,
+                        label: rawStyle.label || null,
+                        valueFormatter: rawStyle.value_formatter || '{value}',
+                        valueSize: rawStyle.value_size || 30,
+                        valueOffset: rawStyle.value_offset || [0, '70%'],
+                        showTitle: rawStyle.show_title !== false,
+                        titleSize: rawStyle.title_size || 14,
+                        titleOffset: rawStyle.title_offset || [0, '90%'],
+                        pointerLength: rawStyle.pointer_length || '60%',
+                        pointerWidth: rawStyle.pointer_width || 6,
+                        showProgress: rawStyle.show_progress !== false,
+                        progressOpacity: rawStyle.progress_opacity || 0.8,
+                        axisWidth: rawStyle.axis_width || 30,
+                        axisColors: rawStyle.axis_colors || [
+                            [0.3, '#67e0e3'],
+                            [0.7, '#37a2da'], 
+                            [1, '#fd666d']
+                        ],
+                        tickDistance: rawStyle.tick_distance || -45,
+                        tickLength: rawStyle.tick_length || 8,
+                        splitDistance: rawStyle.split_distance || -52,
+                        splitLength: rawStyle.split_length || 14,
+                        labelDistance: rawStyle.label_distance || -20,
+                        labelSize: rawStyle.label_size || 12,
+                        showAnchor: rawStyle.show_anchor !== false,
+                        anchorSize: rawStyle.anchor_size || 25,
+                        anchorBorderWidth: rawStyle.anchor_border_width || 10
+                    };
+
+                    // get aggregation type
+                    const aggregationType = "{{ widget.aggregation_type|last }}";
+
+                    // init gauge widget
+                    inst = WidgetsFactory.createGauge("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, style, aggregationType, {{ widget.show_last_value_time|false }});
+                }
+                {% endif %}
+
+                // show no data available message if applicable
+                if (inst) { 
+                    inst.showNoDataMessageIfNoData = {{ widget.show_no_data_message|true }}; 
+                }
+
+                // unknown widget type
+                if (!foundValidType) 
+                {
+                    throw new Error("Unknown widget type: '{{ widget.type }}' for widget '{{ widget.title }}'");
+                }
+            })();
+        </script>
+    {% endfor %}
+
+{% for data_source in data_sources %}
+    <script>
+        (function() {
+            // fetch data for '{{ data_source.id }}' data source
+            const name = "{{ data_source.event }}";
+            const maxAgeDays = {{ data_source.max_age_days|30 }};
+            const lastUniqueByTag = {{ data_source.last_unique_by_tag|false }};
+            const maxResults = {{ data_source.max_results|1000 }};
+            {% if data_source.tags %}
+            const tags = {{ data_source.tags }};
+            {% else %}
+            const tags = null;
+            {% endif %}
+            DataSources.addDataSource("{{ data_source.id }}", name, tags, maxAgeDays, lastUniqueByTag, maxResults);
+        })();
+    </script>
+{% endfor %}
+
+{% endblock %}

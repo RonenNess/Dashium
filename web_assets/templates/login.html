@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Login - {{site_title}}{% endblock %}
+
+{% block navbar_menu %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1 class="card-title text-center mb-4">Login</h1>
+                    <h6 class="text-muted text-center mb-4">{{site_title}}</h6>
+
+                    <p class="text-muted text-center small mb-4">
+                        Please enter your credentials to log in.
+                    </p>
+
+                    <!-- Error display area -->
+                    <div id="error-message" class="alert alert-danger d-none" role="alert"></div>
+
+                    <form id="login-form" method="post" action="#">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="username" 
+                                   name="username" 
+                                   placeholder="Enter your username"
+                                   required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="Enter your password"
+                                   required>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="login-btn">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    Don't have an account? Contact your administrator.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const errorDiv = document.getElementById('error-message');
+    const loginBtn = document.getElementById('login-btn');
+    
+    // Get the next URL from the page URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const nextUrl = urlParams.get('next') || '/';
+    
+    // Hide previous errors
+    errorDiv.classList.add('d-none');
+    
+    // Disable button during request
+    loginBtn.disabled = true;
+    loginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Logging in...';
+    
+    try {
+        // Hash password using SHA-256
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Send AJAX request
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: hashedPassword,
+                next: nextUrl
+            })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            // Success - redirect to specified URL or root
+            window.location.href = result.redirect || '/';
+        } 
+        else {
+            // Error - display error message
+            const errorText = await response.text();
+            errorDiv.textContent = errorText ? JSON.parse(errorText).error : 'Login failed. Please try again.';
+            errorDiv.classList.remove('d-none');
+        }
+    } catch (error) {
+        // Network or other error
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.classList.remove('d-none');
+    } finally {
+        // Re-enable button
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-2"></i>Login';
+    }
+});
+</script>
+
+{% endblock %}

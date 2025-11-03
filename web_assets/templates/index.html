@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Home - {{site_title}}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>{{site_title}}</h1>
+
+    <p>{{home_page_intro}}.<br />
+    Select a dashboard by clicking on a link below.</p>
+    <hr />
+
+    <div class="dashboard-links">
+        {% for dashboard in dashboards %}
+        <div class="dashboard-link">
+            <a href="{{ dashboard.url }}">
+                <h3>{{ dashboard.icon }} {{ dashboard.title }}</h3>
+                <p>{{ dashboard.description }}</p>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}

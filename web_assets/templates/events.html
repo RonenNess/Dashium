@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Events - {{site_title}}{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Raw Events Data: {{ event_name }}</h1><br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Event Name</th>
+                <th>Value</th>
+                <th>Tag</th>
+                <th>Additional Info</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+            <tr>
+                <td>{{ loop.index1 }}</td>
+                <td>{{ event.name }}</td>
+                <td>{{ event.value }}</td>
+                <td>{{ event.tag }}</td>
+                <td>{{ event.additional_info }}</td>
+                <td>{{ event.timestamp }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr />
+
+</div>
+{% endblock %}

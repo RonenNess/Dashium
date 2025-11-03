@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Dashium (Example App)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/engine.py",
+            "args": ["apps/example"],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {},
+            "justMyCode": true
+        }
+    ]
+}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}{{dashboard_name}} - {{site_title}}{% endblock %}
+
+{% block content %}
+    <h1>{{dashboard_name}}</h1>
+    <p>{{description}}</p>
+    <hr />
+    
+    <div class="page-default-time-aggregation">
+        <div class="row">
+            <div class="col-lg-3 col-md-4 col-sm-6" style="margin-top:10px; margin-bottom:-10px; min-height:37px">
+                <span>Default Time Interval </span>
+                <select id="page-time-aggregation" class="time-agg-selection form-select form-select-sm" name="pageTimeAggregationSelect">
+                    <option value="disabled" selected>No Aggregation</option>
+                    <option value="10m">10 minutes</option>
+                    <option value="30m">30 minutes</option>
+                    <option value="hour">Hour</option>
+                    <option value="day">Day</option>
+                    <option value="week">Week</option>
+                </select>
+            </div>
+        </div>
+        <br />
+        <br />
+    </div>
+
+    <script>
+        const defaultPageTimeAggregation = `{{ default_time_aggregation|disabled }}`;
+        document.getElementById('page-time-aggregation').value = defaultPageTimeAggregation;
+        document.getElementById('page-time-aggregation').parentElement.parentElement.style.display = {{ show_page_time_aggregation_selection|true }} ? 'block' : 'none';
+    </script>
+
+    <div class="container-fluid">
+        <div class="row" id="widgets-container">
+        </div>
+    </div>
+
+    <script src="/static/js/widgets_factory.js"></script>
+    <script src="/static/js/data_sources.js"></script>
+    
+{% endblock %}
