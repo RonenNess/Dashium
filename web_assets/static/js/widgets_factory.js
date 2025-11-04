@@ -8,14 +8,21 @@ function normalizedataSources(dataSources)
     if (!dataSources) return [];
     
     return dataSources.map(item => {
-        if (typeof item === 'string') {
+        if (typeof item === 'string') 
+        {
             return { dataSourceId: item, tags: null };
-        } else if (typeof item === 'object' && item.id) {
+        } 
+        else if (typeof item === 'object' && item.id) 
+        {
             return { 
                 dataSourceId: item.id, 
-                tags: item.tags || null 
+                tags: item.tags || null,
+                mutators: item.mutators || null,
+                additionalInfoFilter: item.additional_info_filter || null
             };
-        } else {
+        } 
+        else 
+        {
             throw new Error(`Invalid data source format: ${JSON.stringify(item)}. Expected string or object with dataSourceId property.`);
         }
     });
@@ -1928,18 +1935,25 @@ const WidgetsFactory = {
                         });
                     }
                     
-                    // apply additional data filter
-                    if (widget.additional_info_filter) {
-                        let additionalInfoFilter = widget.additional_info_filter;
-                        if (typeof additionalInfoFilter === 'string') {
-                            additionalInfoFilter = [additionalInfoFilter];
-                        }
-                        data = data.filter((x) => additionalInfoFilter.includes(x.additional_info) );
-                    }
+                    // apply additional filters and mutators
+                    for (let i = 0; i < data.length; i++) {
 
-                    // apply mutators
-                    if (widget.mutators) {
-                        data = EventsMutators.mutate(data, widget.mutators);
+                        // get current source config
+                        let sourceConfig = dataSourceConfigs[i];
+
+                        // apply additional data filter
+                        if (sourceConfig.additionalInfoFilter) {
+                            let additionalInfoFilter = sourceConfig.additionalInfoFilter;
+                            if (typeof additionalInfoFilter === 'string') {
+                                additionalInfoFilter = [additionalInfoFilter];
+                            }
+                            data[i] = data[i].filter((x) => additionalInfoFilter.includes(x.additional_info) );
+                        }
+
+                        // apply mutators
+                        if (sourceConfig.mutators) {
+                            data[i] = EventsMutators.mutate(data[i], sourceConfig.mutators);
+                        }
                     }
 
                     // update data (this should also clear the dirty flag)
