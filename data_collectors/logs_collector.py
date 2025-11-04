@@ -49,6 +49,7 @@ error_message = None
 # - include_regex: Optional regex to only include lines that match this pattern
 # - exclude_regex: Optional regex to exclude lines that match this pattern
 # - skip_until: Optional string/regex to skip all lines until this pattern appears
+# - event_name: Custom event name for generated events (default: 'log_message')
 # - retention_days: Number of days to retain events (default: 30)
 
 
@@ -72,6 +73,7 @@ def collect(config: Dict[str, Any], persistent_state: PersistentState, last_exec
             - 'include_regex': Optional regex to only include matching lines
             - 'exclude_regex': Optional regex to exclude matching lines
             - 'skip_until': Optional string or regex to skip lines until this pattern appears
+            - 'event_name': Optional custom event name (default: 'log_message')
         persistent_state (object): Persistent state object for tracking last read position
         last_execution_time (datetime): Last time this collector was executed
         
@@ -119,7 +121,7 @@ def collect(config: Dict[str, Any], persistent_state: PersistentState, last_exec
         latest_timestamp = last_timestamp
         for line_data in new_lines:
             try:
-                event = _create_event_from_log_line(line_data)
+                event = _create_event_from_log_line(line_data, config)
                 if event:
                     events.append(event)
                     # Track the latest timestamp
@@ -155,9 +157,12 @@ def get_retention_rules(config: Dict[str, Any]) -> List[Dict[str, Any]]:
     Returns:
         List[Dict[str, Any]]: List of retention rules
     """
+    # Get configurable event name, default to 'log_message'
+    event_name = config.get('event_name', 'log_message')
+    
     return [
         {
-            'event_name': 'log_message',
+            'event_name': event_name,
             'retention_days': config.get('retention_days', 30)
         }
     ]
@@ -351,18 +356,22 @@ def _parse_timestamp(timestamp_str: str, timestamp_format: str) -> Optional[date
     return None
 
 
-def _create_event_from_log_line(line_data: Dict[str, Any]) -> Dict[str, Any]:
+def _create_event_from_log_line(line_data: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create an event dictionary from parsed log line data.
     
     Args:
         line_data (Dict[str, Any]): Parsed log line data
+        config (Dict[str, Any]): Collector configuration
         
     Returns:
         Dict[str, Any]: Event data for the data collection system
     """
+    # Get configurable event name, default to 'log_message'
+    event_name = config.get('event_name', 'log_message')
+    
     return {
-        'name': 'log_message',
+        'name': event_name,
         'value': 1,  # Count of log messages
         'timestamp': line_data['timestamp'].isoformat(),
         'tag': line_data['severity'],
