@@ -39,6 +39,18 @@ error_message = None
 # '%Y/%m/%d %H:%M:%S'
 # '%Y/%m/%d %H:%M:%S.%f'
 
+# Configuration Options:
+# - log_file_path: Path to the log file to monitor (required)
+# - log_pattern: Regex pattern for parsing log lines (required) 
+# - timestamp_format: Format for parsing timestamps (required)
+# - timestamp_group_index: Regex group index for timestamp (default: 1)
+# - severity_group_index: Regex group index for severity (default: 2)
+# - content_group_index: Regex group index for content/message (default: 3)
+# - include_regex: Optional regex to only include lines that match this pattern
+# - exclude_regex: Optional regex to exclude lines that match this pattern
+# - skip_until: Optional string/regex to skip all lines until this pattern appears
+# - retention_days: Number of days to retain events (default: 30)
+
 
 def init():
     """Initialize the log file data collector."""
@@ -50,7 +62,16 @@ def collect(config: Dict[str, Any], persistent_state: PersistentState, last_exec
     Collect new log entries from the configured log file.
     
     Args:
-        config (Dict[str, Any]): Configuration containing 'log_file_path', 'log_pattern', and 'timestamp_format'
+        config (Dict[str, Any]): Configuration containing:
+            - 'log_file_path': Path to log file
+            - 'log_pattern': Regex pattern for parsing log lines
+            - 'timestamp_format': Format for parsing timestamps
+            - 'timestamp_group_index': Optional regex group index for timestamp (default: 1)
+            - 'severity_group_index': Optional regex group index for severity (default: 2)  
+            - 'content_group_index': Optional regex group index for content/message (default: 3)
+            - 'include_regex': Optional regex to only include matching lines
+            - 'exclude_regex': Optional regex to exclude matching lines
+            - 'skip_until': Optional string or regex to skip lines until this pattern appears
         persistent_state (object): Persistent state object for tracking last read position
         last_execution_time (datetime): Last time this collector was executed
         
@@ -92,7 +113,7 @@ def collect(config: Dict[str, Any], persistent_state: PersistentState, last_exec
         log.debug(f"Last processed timestamp for {log_file_path}: {last_timestamp}")
         
         # Read and parse log file
-        new_lines = _read_new_log_lines(log_file_path, last_timestamp, timestamp_format, log_pattern)
+        new_lines = _read_new_log_lines(log_file_path, last_timestamp, config)
         
         # Process each new line
         latest_timestamp = last_timestamp
@@ -187,22 +208,33 @@ def _save_last_timestamp(persistent_state: PersistentState, state_key: str, time
 
 
 def _read_new_log_lines(log_file_path: str, last_timestamp: datetime, 
-                       timestamp_format: str, 
-                       log_pattern: str) -> List[Dict[str, Any]]:
+                       config: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Read new log lines from the file that are newer than the last timestamp.
     
     Args:
         log_file_path (str): Path to the log file
         last_timestamp (datetime): Only process lines newer than this
-        timestamp_format (str): Timestamp format from configuration
-        log_pattern (str): Log parsing pattern from configuration
+        config (Dict[str, Any]): Configuration containing filtering and parsing options
         
     Returns:
         List[Dict[str, Any]]: List of parsed log line data
     """
     global error_message
     new_lines = []
+    
+    # Get filtering options from config
+    include_regex = config.get('include_regex')
+    exclude_regex = config.get('exclude_regex')
+    skip_until = config.get('skip_until')
+    
+    # Compile regex patterns if provided
+    include_pattern = re.compile(include_regex) if include_regex else None
+    exclude_pattern = re.compile(exclude_regex) if exclude_regex else None
+    skip_until_pattern = re.compile(skip_until) if skip_until else None
+    
+    # Track whether we should skip lines (for skip_until functionality)
+    skipping_lines = skip_until is not None
     
     try:
         with open(log_file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -211,8 +243,24 @@ def _read_new_log_lines(log_file_path: str, last_timestamp: datetime,
                 if not line:
                     continue
                 
+                # Handle skip_until logic
+                if skipping_lines and skip_until_pattern:
+                    if skip_until_pattern.search(line):
+                        skipping_lines = False  # Stop skipping from this line onwards
+                        log.debug(f"Skip_until pattern matched at line {line_num}, resuming processing")
+                    else:
+                        continue  # Skip this line
+                
+                # Apply include filter (if line doesn't match, skip it)
+                if include_pattern and not include_pattern.search(line):
+                    continue
+                
+                # Apply exclude filter (if line matches, skip it)  
+                if exclude_pattern and exclude_pattern.search(line):
+                    continue
+                
                 # Parse the log line
-                parsed_line = _parse_log_line(line, line_num, timestamp_format, log_pattern)
+                parsed_line = _parse_log_line(line, line_num, config)
                 
                 if parsed_line and parsed_line['timestamp'] > last_timestamp:
                     new_lines.append(parsed_line)
@@ -224,27 +272,37 @@ def _read_new_log_lines(log_file_path: str, last_timestamp: datetime,
 
 
 def _parse_log_line(line: str, line_num: int, 
-                   timestamp_format: str, 
-                   log_pattern: str) -> Optional[Dict[str, Any]]:
+                   config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """
     Parse a single log line to extract timestamp, severity, and message.
     
     Args:
         line (str): Raw log line
         line_num (int): Line number in file
-        timestamp_format (str): Timestamp format from configuration
-        log_pattern (str): Log parsing pattern from configuration
+        config (Dict[str, Any]): Configuration containing parsing options
         
     Returns:
         Optional[Dict[str, Any]]: Parsed line data or None if parsing failed
     """
+    log_pattern = config.get('log_pattern')
+    timestamp_format = config.get('timestamp_format')
+    
+    # Validate required config values
+    if not log_pattern or not timestamp_format:
+        return None
+    
+    # Get configurable group indices (defaults to 1, 2, 3)
+    timestamp_group_index = config.get('timestamp_group_index', 1)
+    severity_group_index = config.get('severity_group_index', 2)
+    content_group_index = config.get('content_group_index', 3)
+    
     # Use the single pattern from config
     match = re.match(log_pattern, line)
     if match:
         try:
-            timestamp_str = match.group(1)
-            severity = match.group(2).upper()
-            message = match.group(3).strip()
+            timestamp_str = match.group(timestamp_group_index)
+            severity = match.group(severity_group_index).upper()
+            message = match.group(content_group_index).strip()
             
             # Parse timestamp
             timestamp = _parse_timestamp(timestamp_str, timestamp_format)
