@@ -7,9 +7,11 @@
     <p>{{description}}</p>
     <hr />
     
-    <div class="page-default-time-aggregation">
+    <div class="">
         <div class="row">
-            <div class="col-lg-3 col-md-4 col-sm-6" style="margin-top:10px; margin-bottom:-10px; min-height:37px">
+
+            <!-- data aggregation selection -->
+            <div id="page-default-time-aggregation-div" class="col-lg-3 col-md-4 col-sm-6" style="margin-top:10px; margin-bottom:-10px; min-height:37px">
                 <span>Default Time Interval </span>
                 <select id="page-time-aggregation" class="time-agg-selection form-select form-select-sm" name="pageTimeAggregationSelect">
                     <option value="disabled" selected>No Aggregation</option>
@@ -20,6 +22,17 @@
                     <option value="week">Week</option>
                 </select>
             </div>
+
+            <!-- event name param choices -->
+            {% if event_name_param_choices %}
+            <div class="col-lg-9 col-md-8 col-sm-6" style="margin-top:10px; margin-bottom:-10px; min-height:37px">
+                <span>Data Type To Show </span><br />
+                {% for choice in event_name_param_choices %}
+                    <a href="?event_name_param={{ choice.value }}" type="button" class="btn btn-primary btn-sm event-name-choice" data-value="{{ choice.value }}">{{ choice.label }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
         </div>
         <br />
         <br />
@@ -28,7 +41,31 @@
     <script>
         const defaultPageTimeAggregation = `{{ default_time_aggregation|disabled }}`;
         document.getElementById('page-time-aggregation').value = defaultPageTimeAggregation;
-        document.getElementById('page-time-aggregation').parentElement.parentElement.style.display = {{ show_page_time_aggregation_selection|true }} ? 'block' : 'none';
+        if ({{ show_page_time_aggregation_selection|true }} === false) { document.getElementById('page-default-time-aggregation-div').style.display = 'none';}
+        
+        // Highlight selected event name button based on URL parameter
+        function highlightSelectedEventNameButton() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const selectedEventName = urlParams.get('event_name_param');
+            
+            // Remove active state from all buttons
+            document.querySelectorAll('.event-name-choice').forEach(button => {
+                button.classList.remove('btn-success');
+                button.classList.add('btn-primary');
+            });
+            
+            // Highlight the selected button
+            if (selectedEventName) {
+                const selectedButton = document.querySelector(`.event-name-choice[data-value="${selectedEventName}"]`);
+                if (selectedButton) {
+                    selectedButton.classList.remove('btn-primary');
+                    selectedButton.classList.add('btn-success');
+                }
+            }
+        }
+        
+        // Run on page load
+        highlightSelectedEventNameButton();
     </script>
 
     <div class="container-fluid">

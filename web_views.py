@@ -140,6 +140,8 @@ def register_web_views(web_server: web_server.WebServer):
         context = dict(
             page_title = title, 
             dashboard_name = title, 
+            default_event_name_param = view.get('default_event_name_param', ''),
+            event_name_param_choices = view.get('event_name_param_choices', []),
             show_page_time_aggregation_selection = view.get('show_page_time_aggregation_selection', True),
             data_sources = view.get('data', []),
             widgets = view.get('widgets', []),

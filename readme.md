@@ -280,6 +280,37 @@ For example, the following `View` configuration will define a dashboard called "
 
 Once this configuration is added to the `VIEWS` list in your application settings, a new dashboard will be automatically generated and accessible from the home page, displaying the example events on a line chart.
 
+All supported widgets are described later.
+
+### Dynamic Data Sources
+
+When defining a data source, you can include a dynamic placeholder in the `event` name property, like `{event_name_param}`. 
+
+At runtime, this placeholder will be replaced with the value of the `event_name_param` parameter from the page URL.
+
+For example, given the following data source configuration:
+
+```py
+{
+    "id": "logs", 
+    "event": "logs_{event_name_param}", 
+    "max_age_days": 10, 
+    "tags": None
+}
+```
+
+If the dashboard is loaded with the query parameter `?event_name_param=application`, it will use `logs_application` as the event name for this data source.
+
+This allows you to create dynamic dashboards that reuse the same widgets while displaying data from different event sources.
+
+To make use of this feature, add the following properties to your `VIEW` configuration:
+
+- **default_event_name_param** - defines the default value for `event_name_param`.  
+  This value will be included in links that point to this dashboard as the default query parameter.
+
+- **event_name_param_choices** - an array of `{ value, label }` objects that generate selection buttons at the top of the dashboard, allowing users to switch between different `event_name_param` values.
+
+
 
 # Build Your Own Application
 
@@ -916,7 +947,7 @@ PUSH_EVENTS_API_CONFIG = {
 - Added data source mutators.
 - Added data source additional info filter.
 - Improved logs data collector.
-- 
+- Added dynamic event names in data sources.
 
 # License
 

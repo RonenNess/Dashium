@@ -3,6 +3,18 @@
 
 {% block extra_scripts %}
 
+    {% if default_event_name_param %}
+    <script>
+        // make sure we have default default_event_name_param value
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.has('event_name_param')) {
+            urlParams.set('event_name_param', '{{ default_event_name_param }}');
+            const newUrl = window.location.pathname + '?' + urlParams.toString();
+            window.history.replaceState({}, '', newUrl);
+        }
+    </script>
+    {% endif %}
+
     {% for widget in widgets %}
         <script>
             (function() {
@@ -326,7 +338,8 @@
     <script>
         (function() {
             // fetch data for '{{ data_source.id }}' data source
-            const name = "{{ data_source.event }}";
+            const eventNameParam = new URLSearchParams(window.location.search).get('event_name_param', '');
+            const name = `{{ data_source.event }}`.replace('{event_name_param}', eventNameParam);
             const maxAgeDays = {{ data_source.max_age_days|30 }};
             const lastUniqueByTag = {{ data_source.last_unique_by_tag|false }};
             const maxResults = {{ data_source.max_results|1000 }};
