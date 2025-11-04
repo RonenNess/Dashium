@@ -1927,6 +1927,20 @@ const WidgetsFactory = {
                             return EventsAggregator.timeIntervalAggregateEvents(source, timeAggSettings.interval, sourceConfig.tags, timeAggSettings.aggregationType);
                         });
                     }
+                    
+                    // apply additional data filter
+                    if (widget.additional_info_filter) {
+                        let additionalInfoFilter = widget.additional_info_filter;
+                        if (typeof additionalInfoFilter === 'string') {
+                            additionalInfoFilter = [additionalInfoFilter];
+                        }
+                        data = data.filter((x) => additionalInfoFilter.includes(x.additional_info) );
+                    }
+
+                    // apply mutators
+                    if (widget.mutators) {
+                        data = EventsMutators.mutate(data, widget.mutators);
+                    }
 
                     // update data (this should also clear the dirty flag)
                     widget.update(data);
@@ -2335,6 +2349,115 @@ const EventConditions =
         }
     }
 }
+
+const EventsMutators =
+{
+    /**
+     * Mutate event data based on specified mutators.
+     * @param {Array} events Events to mutate. It will not change their original values.
+     * @param {Array} mutators List of mutators to apply. Each mutator is an object with {operation, value}.
+     * @returns {Array} Mutated events.
+     */
+    mutate: function(events, mutators)
+    {
+        // first clone the events to avoid modifying original data
+        const mutatedEvents = events.map(event => ({...event}));
+
+        // apply each mutator in sequence
+        for (const mutator of mutators) 
+        {
+            // break if no events left to mutate
+            if (mutatedEvents.length === 0) {
+                break;
+            }
+
+            // apply mutator operation
+            switch (mutator.operation) 
+            {
+                case "add":
+                    mutatedEvents.forEach(event => {
+                        event.value += Number(mutator.value);
+                    });
+                    break;
+
+                case "subtract":
+                    mutatedEvents.forEach(event => {
+                        event.value -= Number(mutator.value);
+                    });
+                    break;
+
+                case "multiply":
+                    mutatedEvents.forEach(event => {
+                        event.value *= Number(mutator.value);
+                    });
+                    break;
+                
+                case "divide":
+                    mutatedEvents.forEach(event => {
+                        if (Number(mutator.value) !== 0) {
+                            event.value /= Number(mutator.value);
+                        }
+                    });
+                    break;
+
+                case "round":
+                    mutatedEvents.forEach(event => {
+                        event.value = Math.round(event.value);
+                    });
+                    break;
+
+                    case "floor":
+                    mutatedEvents.forEach(event => {
+                        event.value = Math.floor(event.value);
+                    });
+                    break;
+
+                case "ceil":
+                    mutatedEvents.forEach(event => {
+                        event.value = Math.ceil(event.value);
+                    });
+                    break;
+
+                case "absolute":
+                    mutatedEvents.forEach(event => {
+                        event.value = Math.abs(event.value);
+                    });
+                    break;
+
+                case "remove_negatives":
+                    mutatedEvents.forEach(event => {
+                        if (event.value < 0) {
+                            event.value = 0;
+                        }
+                    });
+                    break;
+
+                case "to_delta":
+                    let previousValue = mutatedEvents[0];
+                    mutatedEvents.unshift();
+                    mutatedEvents.forEach(event => {
+                        let valueBeforeChange = event.value;
+                        event.value -= previousValue;
+                        previousValue = valueBeforeChange;
+                    });
+                    break;
+
+                case "to_percentage_change":
+                    let prevValue = mutatedEvents[0];
+                    mutatedEvents.unshift();
+                    mutatedEvents.forEach(event => {
+                        event.value = ((event.value - prevValue) / Math.abs(prevValue)) * 100;
+                        prevValue = event.value;
+                    });
+                    break;
+
+                default:
+                    throw new Error(`Unknown event mutator operation "${mutator.operation}".`);
+            }
+            return mutatedEvents;
+        }
+    }
+};
 
 // get updates for page time interval
 function updateDefaultTimeAggregation() {
