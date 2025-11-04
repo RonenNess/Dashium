@@ -457,6 +457,13 @@ The data sources setting define which data sources to assign to this widget. Thi
 ]
 ```
 
+Data sources can have the following properties:
+
+- **id** [required]: the unique identifier of the data source to display in widget.
+- **tags** [optional]: tags to include. any event with `tag` that don't match any of these values, will be ignored.
+- **mutators** [optional]: list of mutators to apply on the value before presenting it. every value is an object with {operation, value}, where operations include the following options: `add, subtract, multiply, divide, round, floor, ceil, absolute, remove_negatives, to_delta, to_percentage_change`.
+- **additional_info_filter** [optional]: list of additional_info values to include. any event with `additional_info` that don't match any of these values, will be ignored.
+
 ### Time Aggregation
 
 Available for line graphs, bar graphs, and gauges, and define how we want to aggregate events based on intervals:
@@ -901,6 +908,15 @@ PUSH_EVENTS_API_CONFIG = {
     "url": "/api/events"
 }
 ```
+
+# Changelist
+
+## 1.0.1
+
+- Added data source mutators.
+- Added data source additional info filter.
+- Improved logs data collector.
+- 
 
 # License
 

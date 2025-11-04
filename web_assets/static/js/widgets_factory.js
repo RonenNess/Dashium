@@ -2370,6 +2370,7 @@ const EventsMutators =
      * Mutate event data based on specified mutators.
      * @param {Array} events Events to mutate. It will not change their original values.
      * @param {Array} mutators List of mutators to apply. Each mutator is an object with {operation, value}.
+     * possible operations: add, subtract, multiply, divide, round, floor, ceil, absolute, remove_negatives, to_delta, to_percentage_change.
      * @returns {Array} Mutated events.
      */
     mutate: function(events, mutators)
