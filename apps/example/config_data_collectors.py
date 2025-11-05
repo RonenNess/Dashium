@@ -40,6 +40,7 @@ DATA_COLLECTORS = [
     {
         "module": "disk_usage", 
         "collect_interval_in_minutes": 10, 
+        "unique_id": "root",
         "config": {
             "retention_days": 60,
             "path": "/",

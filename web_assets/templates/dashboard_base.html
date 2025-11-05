@@ -26,7 +26,7 @@
             <!-- event name param choices -->
             {% if event_name_param_choices %}
             <div class="col-lg-9 col-md-8 col-sm-6" style="margin-top:10px; margin-bottom:-10px; min-height:37px">
-                <span>Data Type To Show </span><br />
+                <span>{{ event_name_param_label|Data Type To Show }}</span><br />
                 {% for choice in event_name_param_choices %}
                     <a href="?event_name_param={{ choice.value }}" type="button" class="btn btn-primary btn-sm event-name-choice" data-value="{{ choice.value }}">{{ choice.label }}</a>
                 {% endfor %}

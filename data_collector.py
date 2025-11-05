@@ -23,14 +23,15 @@ class DataCollector:
     Dynamically load and interface with a data source module.
     """
 
-    def __init__(self, collector_script_name: str, interval_in_minutes: int, collector_config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, collector_script_name: str, interval_in_minutes: int, collector_config: Optional[Dict[str, Any]] = None, unique_id: str = "") -> None:
         """
         Initialize the data source by loading the specified collector script.
         
         Args:
             collector_script_name (str): Name of the data collector script (without .py extension)
-            interval_in_minutes (int): Interval in minutes to run the data collector
-            collector_config (Optional[Dict[str, Any]]): Optional configuration dictionary for the data collector
+            interval_in_minutes (int): Interval in minutes to run the data collector.
+            collector_config (Optional[Dict[str, Any]]): Optional configuration dictionary for the data collector.
+            unique_id (str): Unique identifier for the data collector instance - used for persistent data key and logs.
             
         Returns:
             None
@@ -68,9 +69,12 @@ class DataCollector:
         self.errors_count = 0
         self.collected_events = 0
         self.avg_execution_time_ms = 0.0
+
+        # set unique id
+        self.unique_id = unique_id
         
         # create persistent state object
-        self._persistent_state_path = str(config.DATA_DIR / self.config.get('persistent_state_file_name', f'{self.module_name}_state.json'))
+        self._persistent_state_path = str(config.DATA_DIR / self.config.get('persistent_state_file_name', f'{self.module_name}_{self.unique_id}_state.json'))
         self.persistent_state = PersistentState()
         self.persistent_state.load(self._persistent_state_path, False)
 

@@ -217,6 +217,7 @@ data_collector_template.py - Template for creating new collectors (not functiona
 {
     "module": "disk_usage", 
     "collect_interval_in_minutes": 10, 
+    "unique_id": "root", # if we create another disk usage on a different path, we'll give a different id
     "config": {
         "retention_days": 60,
         "path": "/",
@@ -310,7 +311,7 @@ To make use of this feature, add the following properties to your `VIEW` configu
 
 - **event_name_param_choices** - an array of `{ value, label }` objects that generate selection buttons at the top of the dashboard, allowing users to switch between different `event_name_param` values.
 
-
+To set the text that would appear above the choices, you can set the `event_name_param_label` property.
 
 # Build Your Own Application
 
@@ -341,6 +342,7 @@ For example, the following will enable an example data collector that generate r
 ```py
 {
     "module": "example_data_collector",  # name of the collector script under data_collectors/.
+    "unique_id": "",                     # optional unique id to distinct between different collectors of the same type.
     "collect_interval_in_minutes": 1,    # how often to execute the collector.
     "config": {}                         # additional config, passed to the collector. every collector has its own options.
 }
@@ -501,9 +503,10 @@ Available for line graphs, bar graphs, and gauges, and define how we want to agg
 
 ```python
 "time_aggregation": {
-    "starting_value": "hour",        # Default interval
-    "allow_selection": True,         # Show dropdown selector
-    "aggregation_function": "average" # How to aggregate data points
+    "starting_value": "hour",                               # Default interval
+    "allow_selection": True,                                # Show dropdown selector
+    "aggregation_function": "average",                      # How to aggregate data points
+    "choices": ["disabled", "page_default", "10m", "30m"]   # Optional array of interval options to show in selection (if not set, will show all options)
 }
 ```
 
@@ -521,6 +524,7 @@ Available for line graphs, bar graphs, and gauges, and define how we want to agg
 - `"sum"` - Sum values
 - `"max"` - Maximum value
 - `"min"` - Minimum value
+- `"count"` - Count events
 
 ### Color Options
 
@@ -948,6 +952,16 @@ PUSH_EVENTS_API_CONFIG = {
 - Added data source additional info filter.
 - Improved logs data collector.
 - Added dynamic event names in data sources.
+
+## 1.0.2
+
+- Added `unique_id` to data collectors, to make it possible to create multiple instances of the same type.
+- Added support in `count` time aggregation.
+- Fixed the highlight of the default event name param choice button when dashboard loads without selection.
+- Added option to override label above event name selection.
+- Improved time labels formatting and added auto-hide overlapping.
+- Added `choices` to time aggregation selection.
+- Added the ability to parse and attach value to log events, making it useful to also extract data from logs.
 
 # License
 

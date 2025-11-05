@@ -32,7 +32,11 @@
         <tbody>
             {% for collector in collectors %}
             <tr>
-                <td>{{ collector.module }}</td>
+                {% if collector.unique_id %}
+                    <td>{{ collector.module }} ({{ collector.unique_id }})</td>
+                {% else %}
+                    <td>{{ collector.module }}</td>
+                {% endif %}
                 <td>{{ collector.collect_interval_in_minutes }}</td>
                 <td>{{ collector.status.runs_count }}</td>
                 <td>{{ collector.status.collected_events }}</td>

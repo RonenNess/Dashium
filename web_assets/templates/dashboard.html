@@ -11,6 +11,7 @@
             urlParams.set('event_name_param', '{{ default_event_name_param }}');
             const newUrl = window.location.pathname + '?' + urlParams.toString();
             window.history.replaceState({}, '', newUrl);
+            location.href = newUrl;
         }
     </script>
     {% endif %}
@@ -31,6 +32,7 @@
                         startingValue: `{{ widget.time_aggregation.starting_value|page_default }}`,
                         allowSelection: {{ widget.time_aggregation.allow_selection|true }},
                         aggregationFunction: `{{ widget.time_aggregation.aggregation_function|sum }}`,
+                        choices: {{ widget.time_aggregation.choices|null }}
                     };
                 {% else %}
                     const timeAggSettings = null;
@@ -81,7 +83,7 @@
 
                     // init line graph widget
                     inst = WidgetsFactory.createLinesGraph("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
-                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction, timeAggSettings.choices); }
                 }
                 {% endif %}
 
@@ -134,7 +136,7 @@
 
                     // init bar graph widget
                     inst = WidgetsFactory.createBarsGraph("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
-                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction, timeAggSettings.choices); }
                 }
                 {% endif %}
 
@@ -234,7 +236,7 @@
 
                     // init scatter map widget
                     inst = WidgetsFactory.createScatterMap("{{ widget.title }}", "{{ widget.description }}", {{ widget.columns|12 }}, {{ widget.height|1 }}, {{ widget.data_sources }}, styles, options);
-                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction, timeAggSettings.choices); }
                 }
                 {% endif %}
 
@@ -251,7 +253,7 @@
                     // lines graph widget
                     foundValidType = true;
                     inst = WidgetsFactory.createTable("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, {{ widget.table_columns }}, {{ widget.max_rows|10 }}, {{ widget.color_rules|null }}, `{{ widget.slice_from|start }}`);
-                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction); }
+                    if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction, timeAggSettings.choices); }
                 }
                 {% endif %}
 

@@ -82,6 +82,9 @@ function generateTimeRangeTimestamps(maxAgeDays, aggregationInterval, existingEv
         return [];
     }
     
+    // should we show the time component of the timestamps?
+    let showTime = true;
+
     // Determine step size based on aggregation interval
     let stepMs;
     switch (aggregationInterval) {
@@ -96,15 +99,19 @@ function generateTimeRangeTimestamps(maxAgeDays, aggregationInterval, existingEv
             break;
         case 'day':
             stepMs = 24 * 60 * 60 * 1000; // 1 day
+            showTime = false;
             break;
         case 'week':
             stepMs = 7 * 24 * 60 * 60 * 1000; // 1 week
+            showTime = false;
             break;
         case 'month':
             stepMs = 30 * 24 * 60 * 60 * 1000; // ~1 month (30 days)
+            showTime = false;
             break;
         case 'year':
             stepMs = 365 * 24 * 60 * 60 * 1000; // ~1 year (365 days)
+            showTime = false;
             break;
         default:
             // Default to 5 minutes
@@ -152,7 +159,13 @@ function generateTimeRangeTimestamps(maxAgeDays, aggregationInterval, existingEv
     while (currentDate <= now) 
     {
         // Format as local time to avoid timezone conversion issues
-        const localTimestamp = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')} ${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}:${String(currentDate.getSeconds()).padStart(2, '0')}`;
+        let localTimestamp;
+        if (showTime) {
+            localTimestamp = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')} ${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}:${String(currentDate.getSeconds()).padStart(2, '0')}`;
+        }
+        else {
+            localTimestamp = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+        }
         timestamps.push(localTimestamp);
         currentDate = new Date(currentDate.getTime() + stepMs);
     }
@@ -326,16 +339,33 @@ function processDataSourcesForTimeAxis(dataSources, normalizedDataSources, aggre
  * Helper function to get common X-axis configuration for time-axis charts.
  * @returns {Object} X-axis configuration object for ECharts.
  */
-function getTimeAxisConfiguration() {
-    return {
-        type: 'time',
-        axisLabel: {
-            formatter: function (value) {
-                const date = new Date(value);
-                return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+function getTimeAxisConfiguration(aggregationInterval) {
+    if (aggregationInterval === 'disabled' || aggregationInterval === '10m' || aggregationInterval === '30m' || aggregationInterval === 'hour') 
+    {
+        return {
+            type: 'time',
+            axisLabel: {
+                hideOverlap: true,
+                formatter: function (value) {
+                    const date = new Date(value);
+                    return `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                }
             }
-        }
-    };
+        };
+    }
+    else 
+    {
+        return {
+            type: 'time',
+            axisLabel: {
+                hideOverlap: true,
+                formatter: function (value) {
+                    const date = new Date(value);
+                    return `${String(date.getFullYear()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                }
+            }
+        };
+    }
 }
 
 /**
@@ -468,8 +498,9 @@ class Widget
      * @param {String} defaultValue Default selected value.
      * @param {Boolean} allowSelection Show or hide the selection box (you can still set value without box, making it const).
      * @param {String} aggregationFunction Aggregation function to use (e.g. "average").
+     * @param {Array|null} choices Optional array of choices for the selection.
      */
-    addTimeAggregation(defaultValue = "page_default", allowSelection = true, aggregationFunction = "average")
+    addTimeAggregation(defaultValue = "page_default", allowSelection = true, aggregationFunction = "average", choices = null)
     {
         // store settings
         this._timeAggregation = {
@@ -479,6 +510,11 @@ class Widget
         }
         this._dirty = true;
 
+        // default choices: all
+        if (!choices) {
+            choices = ["page_default", "disabled", "10m", "30m", "hour", "day", "week"];
+        }
+
         // add selection
         if (allowSelection) {
             const containerDom = this.getDomElement();
@@ -486,17 +522,17 @@ class Widget
             const html = `<div class="col-lg-4 col-md-5 col-sm-6" style="display: ${allowSelection ? 'block' : 'none'}; margin-top:10px; margin-bottom:-10px; min-height:37px">
                 <span>Time Interval (${aggregationFunction.split('_')[0]}) </span>
                 <select class="time-agg-selection form-select form-select-sm" name="intervalSelect">
-                <option value="page_default" ${defaultValue === "page_default" ? 'selected' : ''}>Use Page Default</option>
-                <option value="disabled" ${defaultValue === "disabled" ? 'selected' : ''}>No Aggregation</option>
-                <option value="10m" ${defaultValue === "10m" ? 'selected' : ''}>10 minutes</option>
-                <option value="30m" ${defaultValue === "30m" ? 'selected' : ''}>30 minutes</option>
-                <option value="hour" ${defaultValue === "hour" ? 'selected' : ''}>Hour</option>
-                <option value="day" ${defaultValue === "day" ? 'selected' : ''}>Day</option>
-                <option value="week" ${defaultValue === "week" ? 'selected' : ''}>Week</option>
+                <option style="${choices.includes("page_default") ? '' : 'display:none;'}" value="page_default" ${defaultValue === "page_default" ? 'selected' : ''}>Use Page Default</option>
+                <option style="${choices.includes("disabled") ? '' : 'display:none;'}" value="disabled" ${defaultValue === "disabled" ? 'selected' : ''}>No Aggregation</option>
+                <option style="${choices.includes("10m") ? '' : 'display:none;'}" value="10m" ${defaultValue === "10m" ? 'selected' : ''}>10 minutes</option>
+                <option style="${choices.includes("30m") ? '' : 'display:none;'}" value="30m" ${defaultValue === "30m" ? 'selected' : ''}>30 minutes</option>
+                <option style="${choices.includes("hour") ? '' : 'display:none;'}" value="hour" ${defaultValue === "hour" ? 'selected' : ''}>Hour</option>
+                <option style="${choices.includes("day") ? '' : 'display:none;'}" value="day" ${defaultValue === "day" ? 'selected' : ''}>Day</option>
+                <option style="${choices.includes("week") ? '' : 'display:none;'}" value="week" ${defaultValue === "week" ? 'selected' : ''}>Week</option>
                 </select>
             </div>`;
-            // <option value="month" ${defaultValue === "month" ? 'selected' : ''}>Month</option>
-            // <option value="year" ${defaultValue === "year" ? 'selected' : ''}>Year</option>
+
+            // append to options bar
             containerDom.parentElement.getElementsByClassName('options-bar')[0].innerHTML += html;
             containerDom.parentElement.getElementsByClassName('time-agg-selection')[0].addEventListener('change', (event) => {
                 this._dirty = true;
@@ -963,7 +999,7 @@ class LineGraphWidget extends Widget
         
         // Update chart (no xAxis.data needed for time axis)
         this.getChartInstance().setOption({
-            xAxis: getTimeAxisConfiguration(),
+            xAxis: getTimeAxisConfiguration(aggregationInterval),
             series: seriesUpdates
         });
     }
@@ -1127,7 +1163,7 @@ class BarGraphWidget extends Widget
         
         // Update chart (no xAxis.data needed for time axis)
         this.getChartInstance().setOption({
-            xAxis: getTimeAxisConfiguration(),
+            xAxis: getTimeAxisConfiguration(aggregationInterval),
             series: seriesUpdates
         });
     }
@@ -2204,7 +2240,7 @@ const EventsAggregator = {
      * @param {Array} events - Array of events with timestamp, value, and tag properties.
      * @param {string} interval - Time interval: "disabled", "10m", "30m", "hour", "day", "week", "month", "year".
      * @param {Array<string>} tags - Optional tags to filter events.
-     * @param {string} aggregationType - Type of aggregation: "sum", "average", "max", "min".
+     * @param {string} aggregationType - Type of aggregation: "sum", "average", "max", "min", "count".
      * @returns {Array} Processed events grouped by tag and time interval.
      */
     timeIntervalAggregateEvents: function(events, interval, tags, aggregationType) 
@@ -2298,6 +2334,13 @@ const EventsAggregator = {
             
             aggData.count++;
         });
+
+        // For count, set value to count of events
+        if (aggregationType === 'count') {
+            for (let [timestampMs, aggData] of aggregationMap) {
+                aggData.value = aggData.count;
+            }
+        }
 
         // Process averages
         if (aggregationType === 'average' || aggregationType === 'average_round') {

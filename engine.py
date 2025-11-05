@@ -18,7 +18,7 @@ print(r"""
  | |  | | __ _ ___| |__  _ _   _ _ __ ___  
  | |  | |/ _` / __| '_ \| | | | | '_ ` _ \ 
  | |__| | (_| \__ \ | | | | |_| | | | | | |
- |_____/ \__,_|___/_| |_|_|\__,_|_| |_| |_| v1.0.1
+ |_____/ \__,_|___/_| |_|_|\__,_|_| |_| |_| v1.0.2
                                            
    ^ by Ronen Ness, 2025       
 """)
@@ -87,7 +87,7 @@ for ds_config in config.DATA_COLLECTORS:
     module_config = ds_config.get("config", {})
     
     # create data collector instance
-    data_collector = DataCollector(module, interval, module_config)
+    data_collector = DataCollector(module, interval, module_config, unique_id=ds_config.get("unique_id", ""))
     data_collectors.append(data_collector)
     log.info(f"Loaded data collector module: {module}")
 

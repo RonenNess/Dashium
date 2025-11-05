@@ -70,6 +70,7 @@ def collect(config: Dict[str, Any], persistent_state: PersistentState, last_exec
             - 'timestamp_group_index': Optional regex group index for timestamp (default: 1)
             - 'severity_group_index': Optional regex group index for severity (default: 2)  
             - 'content_group_index': Optional regex group index for content/message (default: 3)
+            - 'value_group_index': Optional regex group index for value (default: None, uses 1 if not set)
             - 'include_regex': Optional regex to only include matching lines
             - 'exclude_regex': Optional regex to exclude matching lines
             - 'skip_until': Optional string or regex to skip lines until this pattern appears
@@ -300,6 +301,7 @@ def _parse_log_line(line: str, line_num: int,
     timestamp_group_index = config.get('timestamp_group_index', 1)
     severity_group_index = config.get('severity_group_index', 2)
     content_group_index = config.get('content_group_index', 3)
+    value_group_index = config.get('value_group_index', None)
     
     # Use the single pattern from config
     match = re.match(log_pattern, line)
@@ -308,6 +310,7 @@ def _parse_log_line(line: str, line_num: int,
             timestamp_str = match.group(timestamp_group_index)
             severity = match.group(severity_group_index).upper()
             message = match.group(content_group_index).strip()
+            value = int(match.group(value_group_index).strip()) if value_group_index else 1
             
             # Parse timestamp
             timestamp = _parse_timestamp(timestamp_str, timestamp_format)
@@ -317,6 +320,7 @@ def _parse_log_line(line: str, line_num: int,
                     'severity': severity,
                     'message': message,
                     'raw_line': line,
+                    'value': value,
                     'line_number': line_num
                 }
             
@@ -372,7 +376,7 @@ def _create_event_from_log_line(line_data: Dict[str, Any], config: Dict[str, Any
     
     return {
         'name': event_name,
-        'value': 1,  # Count of log messages
+        'value': line_data['value'],
         'timestamp': line_data['timestamp'].isoformat(),
         'tag': line_data['severity'],
         'additional_info': line_data['message']

@@ -3,7 +3,7 @@ Implement the job that collects events from data collectors.
 Author: Ronen Ness.
 Created: 2025.
 """
-from typing import List
+from typing import List, Optional
 from data_collector import DataCollector
 from db import DatabaseManager
 import timer
@@ -17,13 +17,13 @@ db: DatabaseManager = None # type: ignore
 data_collectors: List[DataCollector] = None # type: ignore
 
 
-def get_data_collector_status(module):
+def get_data_collector_status(module: str, unique_id: str = "") -> Optional[dict]:
     """Get the status of a data collector module."""
     for data_collector in data_collectors:
-        if data_collector.module_name == module:
+        if data_collector.module_name == module and data_collector.unique_id == unique_id:
             return data_collector.get_status()
-        
-    log.warning(f"Data collector not found for module: {module}")
+
+    log.warning(f"Data collector not found for module: {module}, unique_id: {unique_id}")
     return None
 
 

@@ -50,7 +50,7 @@ def setup_admin_page(web_server: web_server.WebServer):
 
         # add data collectors status
         for collector in context["collectors"]:
-            collector['status'] = collect_events_job.get_data_collector_status(collector["module"])
+            collector['status'] = collect_events_job.get_data_collector_status(collector["module"], collector.get("unique_id", ""))
 
         # add event names and counters
         context["events"] = db.get_event_names_with_counts()
@@ -142,6 +142,7 @@ def register_web_views(web_server: web_server.WebServer):
             dashboard_name = title, 
             default_event_name_param = view.get('default_event_name_param', ''),
             event_name_param_choices = view.get('event_name_param_choices', []),
+            event_name_param_label = view.get('event_name_param_label', ''),
             show_page_time_aggregation_selection = view.get('show_page_time_aggregation_selection', True),
             data_sources = view.get('data', []),
             widgets = view.get('widgets', []),
