@@ -962,6 +962,7 @@ PUSH_EVENTS_API_CONFIG = {
 - Improved time labels formatting and added auto-hide overlapping.
 - Added `choices` to time aggregation selection.
 - Added the ability to parse and attach value to log events, making it useful to also extract data from logs.
+- Added API stats to admin page.
 
 # License
 

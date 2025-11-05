@@ -3,11 +3,37 @@ Build the web APIs for the application.
 Author: Ronen Ness.
 Created: 2025.
 """
+from cmath import log
 from typing import Dict, Any, List, Tuple, Optional
 import web_server
 import db
 import config
 from datetime import datetime
+import logger
+
+log = logger.get_logger(__name__)
+
+class APIStats:
+    """Class to hold API statistics."""
+    def __init__(self):
+        self.total_requests: int = 0
+        self.total_errors: int = 0
+        self.average_response_time_ms: float = 0.0
+        self.max_response_time_ms: float = 0.0
+
+    def update_times(self, response_time_ms: float) -> None:
+        """Update average and max response times."""
+        self.average_response_time_ms = (
+            (self.average_response_time_ms * (self.total_requests - 1) + response_time_ms)
+            / self.total_requests
+        )
+        if response_time_ms > self.max_response_time_ms:
+            self.max_response_time_ms = response_time_ms
+
+# apis stats
+# key is url, value is API stats
+api_stats = {}
+
 
 def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) -> None:
     """
@@ -32,28 +58,52 @@ def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) 
         Returns:
             Tuple[List[Dict[str, Any]], int]: List of events and HTTP status code
         """
+        # get api stats to update
+        global api_stats
+        stats_key = ";".join(f"{k}={v}" for k, v in query_params.items())
+        if stats_key not in api_stats:
+            api_stats[stats_key] = APIStats()
+        api_stats_entry = api_stats[stats_key]
+        api_stats_entry.total_requests += 1
+
+        # get time measurement before fetching
+        start_time = datetime.now()
+
         # query_params = {'name': 'example_event', 'max_age_days': '10'}
         name = query_params.get("name")
         if not name:
+            api_stats_entry.total_errors += 1
             return [], 400  # Bad request if no name provided
-            
-        # special - if last_unique_by_tag is set, get only the latest event for each tag
-        print (query_params.get("last_unique_by_tag", "false"))
-        if query_params.get("last_unique_by_tag", "false").lower() == "true":
-            events = db.get_latest_events_by_tag(
-                name=name,
-                tags=query_params.get("tag")
-            )
-            return events, 200
 
-        # fetch events based on other parameters
-        events = db.get_events(
-            name=name,
-            tags=query_params.get("tag"),
-            max_age_days=int(query_params.get("max_age_days", 0)),
-            max_results=int(query_params.get("max_results", 0))
-        )
-        return events, 200
+        try:
+
+            # special - if last_unique_by_tag is set, get only the latest event for each tag
+            if query_params.get("last_unique_by_tag", "false").lower() == "true":
+                events = db.get_latest_events_by_tag(
+                    name=name,
+                    tags=query_params.get("tag")
+                )
+                api_stats_entry.update_times((datetime.now() - start_time).total_seconds() * 1000)
+                return events, 200
+
+            # fetch events based on other parameters
+            events = db.get_events(
+                name=name,
+                tags=query_params.get("tag"),
+                max_age_days=int(query_params.get("max_age_days", 0)),
+                max_results=int(query_params.get("max_results", 0))
+            )
+
+            # log time taken
+            api_stats_entry.update_times((datetime.now() - start_time).total_seconds() * 1000)
+            
+            # return results
+            return events, 200
+        
+        except Exception as e:
+            api_stats_entry.total_errors += 1
+            log.error(f"Error fetching events for API: {e}")
+            raise e
 
     web_server.register_api(urls=["/api/events"], callback=fetch_events_api)
 

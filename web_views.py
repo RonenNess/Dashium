@@ -8,6 +8,7 @@ import web_server
 import config
 import collect_events_job
 from db import DatabaseManager
+from web_apis import api_stats
 
 # set by the engine
 db: DatabaseManager = None # type: ignore
@@ -69,6 +70,18 @@ def setup_admin_page(web_server: web_server.WebServer):
         else:
             context["auth_required"] = False
             context["auth_manager"] = {}
+
+        # add API stats
+        api_stats_list = []
+        for api_name, api_stats_entry in api_stats.items():
+            api_stats_list.append({
+                "api_name": api_name,
+                "total_calls": api_stats_entry.total_requests,
+                "total_errors": api_stats_entry.total_errors,
+                "avg_response_time_ms": round(api_stats_entry.average_response_time_ms, 2),
+                "max_response_time_ms": round(api_stats_entry.max_response_time_ms, 2),
+            })
+        context["api_stats"] = api_stats_list
         
         # add sessions data
         if config.AUTHENTICATION_ENABLED:

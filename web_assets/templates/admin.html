@@ -79,6 +79,34 @@
     <hr />
 
 
+    <h2>API Stats</h2>
+    <p>The table below lists the configured API endpoints and their current stats.</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Endpoint</th>
+                <th>Total Calls</th>
+                <th>Errors Count</th>
+                <th>Avg Response Time (ms)</th>
+                <th>Longest Response Time (ms)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for api_stats in api_stats %}
+            <tr>
+                <td>{{ api_stats.api_name }}</td>
+                <td>{{ api_stats.total_calls }}</td>
+                <td>{{ api_stats.total_errors }}</td>
+                <td>{{ api_stats.avg_response_time_ms }}</td>
+                <td>{{ api_stats.max_response_time_ms }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <hr />
+
+
     <h2>Server Logs</h2>
     <textarea class="form-control" rows="20" readonly>
 {{ server_logs }}
