@@ -27,7 +27,9 @@
                 <th>Error Message</th>
                 <th>Init / Last run Time</th>
                 <th>Avg Run Time (ms)</th>
-            </tr>
+                <th>Cleanup Times</th>
+                <th>Deleted Events Count</th>
+            </tr>  
         </thead>
         <tbody>
             {% for collector in collectors %}
@@ -44,6 +46,8 @@
                 <td>{{ collector.status.error_message }}</td>
                 <td>{{ collector.status.last_execution_time }}</td>
                 <td>{{ collector.status.avg_execution_time_ms }}</td>
+                <td>{{ collector.status.cleanup_times }}</td>
+                <td>{{ collector.status.deleted_events_count }}</td>
             </tr>
             {% endfor %}
         </tbody>

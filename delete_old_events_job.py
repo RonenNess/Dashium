@@ -24,6 +24,7 @@ def delete_old_events():
     # iterate over data collectors and collect data
     for data_collector in data_collectors:
 
+        total_deleted_count = 0
         rules = data_collector.get_retention_rules()
         for rule in rules:
 
@@ -42,6 +43,9 @@ def delete_old_events():
             tag = rule.get("tag")
             deleted_count = db.delete_old_events(event_name, tag, age_days)
             log.info(f"Deleted {deleted_count} old events of type '{event_name}' from the database.")
+            total_deleted_count += deleted_count
+        
+        data_collector.add_deleted_events_count(total_deleted_count)
 
     log.debug(f"Finished old events cleanup job!")
 

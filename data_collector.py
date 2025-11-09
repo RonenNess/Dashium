@@ -69,6 +69,8 @@ class DataCollector:
         self.errors_count = 0
         self.collected_events = 0
         self.avg_execution_time_ms = 0.0
+        self.cleanup_times = 0
+        self.deleted_events_count = 0
 
         # set unique id
         self.unique_id = unique_id
@@ -77,6 +79,20 @@ class DataCollector:
         self._persistent_state_path = str(config.DATA_DIR / self.config.get('persistent_state_file_name', f'{self.module_name}_{self.unique_id}_state.json'))
         self.persistent_state = PersistentState()
         self.persistent_state.load(self._persistent_state_path, False)
+
+
+    def add_deleted_events_count(self, count: int) -> None:
+        """
+        Add to the count of deleted events by this data collector.
+        
+        Args:
+            count (int): Number of deleted events to add.
+            
+        Returns:
+            None
+        """
+        self.deleted_events_count += count
+        self.cleanup_times += 1
 
 
     def get_status(self) -> Dict[str, Any]:
@@ -91,6 +107,8 @@ class DataCollector:
             "errors_count": self.errors_count,
             "collected_events": self.collected_events,
             "runs_count": self.runs_count,
+            "cleanup_times": self.cleanup_times,
+            "deleted_events_count": self.deleted_events_count,
             "error_message": getattr(self.module, 'error_message', None) or '',
             "avg_execution_time_ms": math.ceil(self.avg_execution_time_ms)
         }

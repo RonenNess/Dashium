@@ -969,6 +969,7 @@ PUSH_EVENTS_API_CONFIG = {
 - Changed default logs max size to 10MB.
 - Changed default logs format to include level and time first.
 - Replaced calling `crypto.subtle.digest`, which is not always available, to using a function implemented in utils.
+- Added events cleanup stats to data collectors in admin panel.
 
 # License
 
