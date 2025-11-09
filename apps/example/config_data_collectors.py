@@ -52,8 +52,11 @@ DATA_COLLECTORS = [
         "collect_interval_in_minutes": 1, 
         "config": {
             "log_file_path": str(Path(__file__).parent / 'logs' / 'app.log'),
-            "log_pattern": r'^[^|]*\|\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3})\s*\|\s*(\w+)\s*\|:\s*(.+)$',
+            "log_pattern": r'^(\w+)\s*\|\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2},\d{3})\s*\|\s*([^|]+)\s*\|\s*(.+)$',
             "timestamp_format": '%Y-%m-%d %H:%M:%S,%f',
+            "timestamp_group_index": 2,
+            "severity_group_index": 1,
+            "content_group_index": 4,
             "retention_days": 60
         }
     }

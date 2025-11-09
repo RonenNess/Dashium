@@ -964,6 +964,12 @@ PUSH_EVENTS_API_CONFIG = {
 - Added the ability to parse and attach value to log events, making it useful to also extract data from logs.
 - Added API stats to admin page.
 
+## 1.0.3
+
+- Changed default logs max size to 10MB.
+- Changed default logs format to include level and time first.
+- Replaced calling `crypto.subtle.digest`, which is not always available, to using a function implemented in utils.
+
 # License
 
 `Dashium` is free to use under the MIT license.

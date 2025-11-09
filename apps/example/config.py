@@ -34,12 +34,12 @@ DATABASE: Dict = {
 
 # logs configuration
 LOGS: Dict = {
-    "format": "%(name)s | %(asctime)s | %(levelname)s |: %(message)s",
+    "format": "%(levelname)s | %(asctime)s | %(name)s | %(message)s",
     "enable_log_file": True,
     "enable_console_log": True,
     "log_level": "INFO",
     "log_file": LOGS_DIR / "app.log",
-    "max_bytes": 1024*10,
+    "max_bytes": 1024*1024*10,
     "backup_count": 3
 }
 
