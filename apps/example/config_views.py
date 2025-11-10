@@ -563,6 +563,9 @@ VIEWS.append(
                 "max_rows": 1000,
                 "slice_from": "end",
                 "height": 0,
+                "filters": [
+                    { "field": "Severity" }
+                ],
                 "table_columns": [
                     { "title": "#", "event_field": "index" },
                     { "title": "Severity", "event_field": "tag" },

@@ -186,3 +186,14 @@ a {
   from { background-position: 0 0; }
   to { background-position: 40px 0; }
 }
+
+/* make sure checkbox have pointer cursor */
+.form-check-label {
+  cursor: pointer !important;
+}
+.form-check-input {
+  cursor: pointer !important;
+}
+checkbox {
+  cursor: pointer !important;
+}

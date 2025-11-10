@@ -696,8 +696,9 @@ class TableWidget extends Widget
      * @param {Number} maxRows Maximum number of rows to display.
      * @param {Array<Object>} colorRules Array of color rules for the table.
      * @param {String} sliceFrom Where to slice the data from (e.g. "start", "end").
+     * @param {Array<Object>|null} tableFilters Optional table filters to apply.
      */
-    constructor(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules = null, sliceFrom = "start")
+    constructor(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules = null, sliceFrom = "start", tableFilters = null)
     {
         // call parent constructor
         super(title, description, widthColumns, height, dataSources);
@@ -716,9 +717,25 @@ class TableWidget extends Widget
         this.tableColumns = tableColumns;
         this.maxRows = maxRows;
         this.colorRules = colorRules;
+        this.tableFilters = tableFilters;
 
-        // build table headers
+        // build table with filters if specified
+        let filtersHtml = '';
+        if (tableFilters && tableFilters.length > 0) {
+            filtersHtml = '<div class="table-filters mb-3">';
+            tableFilters.forEach((filter, filterIndex) => {
+                filtersHtml += `<div class="filter-group mb-2">
+                    <label class="form-label"><strong>Filter by '${filter.field}':</strong></label>
+                    <div class="filter-choices" data-field="${filter.field}" data-filter-index="${filterIndex}">
+                        <!-- Choices will be populated dynamically -->
+                    </div>
+                </div>`;
+            });
+            filtersHtml += '</div>';
+        }
+
         containerDom.innerHTML = `<hr />
+        ${filtersHtml}
         <table class="table ${WidgetsFactory.isDarkMode ? 'table-dark' : ''}">
             <thead>
                 <tr>
@@ -743,87 +760,258 @@ class TableWidget extends Widget
         const maxRows = this.maxRows;
         const colorRules = this.colorRules;
         const tableColumns = this.tableColumns;
+        const tableFilters = this.tableFilters;
         const containerDom = this.getDomElement();
 
-        // iterate data sources
-        let index = 1;
-        for (let source of dataSources) 
-        {
-            // slice data if needed
-            if (maxRows) 
-            {
-                // slice from end?
-                if (sliceFrom === "end") {
-                    source = source.slice(-maxRows);
-                }
-                // slice from start?
-                else if (sliceFrom === "start") {
-                    source = source.slice(0, maxRows);
-                }
-                // unknown slice?
-                else {
-                    throw new Error(`Unknown sliceFrom value "${sliceFrom}" for table widget "${title}". Defaulting to "start".`);
-                }
-            }
+        // Clear existing table body
+        containerDom.querySelector("tbody").innerHTML = "";
 
-            // iterate events
-            for (let i = 0; i < source.length; i++) 
-            {
-                // get event data
-                const event = source[i];
+        // Collect all events from all data sources first
+        let allEvents = [];
+        let eventIndex = 1;
+        
+        for (let source of dataSources) {
+            for (let event of source) {
+                // Create enriched event object with index and field mappings
+                const enrichedEvent = {
+                    ...event,
+                    eventIndex: eventIndex++,
+                    fieldValues: {} // Will store field name -> value mappings
+                };
 
-                // set color
-                let rowColor = "";
-                for (const rule of (colorRules || [])) 
-                {    
-                    let fieldValue = {
-                        "value": event.value,
-                        "tag": event.tag,
-                        "time": event.timestamp,
-                        "additional_info": event.additional_info,
-                        "event_name": event.name,
-                        "index": index
-                    }[rule.event_field];
-
-                    if (EventConditions.evaluate(fieldValue, rule.condition, rule.value)) {
-                        rowColor = 'table-' + rule.color;
-                    }
-                }
-
-                // build row
-                let rowHtml = `<tr class="${rowColor}">\n`;
-                for (const col of tableColumns) 
-                {
+                // Map table columns to field values for filtering
+                for (const col of tableColumns) {
+                    let fieldValue = '';
                     if (col.event_field === "value") {
-                        rowHtml += `<td>${event.value}</td>\n`;
-                    } 
-                    else if (col.event_field === "tag") {
-                        rowHtml += `<td>${event.tag}</td>\n`;
-                    } 
-                    else if (col.event_field === "time") {
-                        rowHtml += `<td>${event.timestamp.replace('T', ' ').replace('Z', '')}</td>\n`;
+                        fieldValue = event.value;
+                    } else if (col.event_field === "tag") {
+                        fieldValue = event.tag;
+                    } else if (col.event_field === "time") {
+                        fieldValue = event.timestamp.replace('T', ' ').replace('Z', '');
+                    } else if (col.event_field === "additional_info") {
+                        fieldValue = event.additional_info || "";
+                    } else if (col.event_field === "event_name") {
+                        fieldValue = event.name;
+                    } else if (col.event_field === "index") {
+                        fieldValue = enrichedEvent.eventIndex;
                     }
-                    else if (col.event_field === "additional_info") {
-                        rowHtml += `<td>${event.additional_info || ""}</td>\n`;
-                    }
-                    else if (col.event_field === "event_name") {
-                        rowHtml += `<td>${event.name}</td>\n`;
-                    }
-                    else if (col.event_field === "index") {
-                        rowHtml += `<td>${index}</td>\n`;
-                    }
+                    enrichedEvent.fieldValues[col.title] = fieldValue;
                 }
-                rowHtml += "</tr>\n";
-                containerDom.querySelector("tbody").innerHTML += rowHtml;
 
-                // increment global index
-                index++;
+                allEvents.push(enrichedEvent);
+            }
+        }
+
+        // Setup filters if they exist
+        if (tableFilters && tableFilters.length > 0) {
+            this._setupTableFilters(allEvents);
+        }
+
+        // Slice data if needed
+        if (maxRows) {
+            if (sliceFrom === "end") {
+                allEvents = allEvents.slice(-maxRows);
+            } else if (sliceFrom === "start") {
+                allEvents = allEvents.slice(0, maxRows);
+            } else {
+                throw new Error(`Unknown sliceFrom value "${sliceFrom}" for table widget. Defaulting to "start".`);
+            }
+        }
+
+        // Render table rows
+        this._renderTableRows(allEvents, colorRules, tableColumns, containerDom);
+    }
+
+    /**
+     * Setup table filters with checkboxes
+     * @param {Array} allEvents All events to analyze for filter choices
+     */
+    _setupTableFilters(allEvents) {
+        const containerDom = this.getDomElement();
+        
+        this.tableFilters.forEach((filter, filterIndex) => {
+            const filterDiv = containerDom.querySelector(`[data-filter-index="${filterIndex}"]`);
+            if (!filterDiv) return;
+
+            let choices = filter.choices;
+
+            // Generate choices if not provided
+            if (!choices) {
+                // Get all distinct values for this field
+                const distinctValues = [...new Set(
+                    allEvents.map(event => event.fieldValues[filter.field])
+                        .filter(value => value !== undefined && value !== null && value !== '')
+                )];
+                choices = distinctValues.sort();
+            } else if (typeof choices === 'number') {
+                // Get most common X values
+                const valueCounts = {};
+                allEvents.forEach(event => {
+                    const value = event.fieldValues[filter.field];
+                    if (value !== undefined && value !== null && value !== '') {
+                        valueCounts[value] = (valueCounts[value] || 0) + 1;
+                    }
+                });
+                
+                choices = Object.entries(valueCounts)
+                    .sort((a, b) => b[1] - a[1]) // Sort by count descending
+                    .slice(0, choices) // Take top X
+                    .map(entry => entry[0]); // Get just the values
             }
 
-            // check max rows
-            if (maxRows && index > maxRows) {
-                break;
+            // Create checkboxes for choices
+            let choicesHtml = '';
+            choices.forEach(choice => {
+                const checkboxId = `filter_${filterIndex}_${choice.toString().replace(/[^a-zA-Z0-9]/g, '_')}`;
+                choicesHtml += `
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input table-filter-checkbox" type="checkbox" 
+                               id="${checkboxId}" 
+                               data-filter-field="${filter.field}" 
+                               data-filter-value="${choice}" 
+                               checked>
+                        <label class="form-check-label" for="${checkboxId}">
+                            ${choice}
+                        </label>
+                    </div>
+                `;
+            });
+
+            filterDiv.innerHTML = choicesHtml;
+
+            // Add event listeners to checkboxes
+            filterDiv.querySelectorAll('.table-filter-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', () => this._applyTableFilters());
+            });
+        });
+    }
+
+    /**
+     * Apply table filters by showing/hiding rows
+     */
+    _applyTableFilters() {
+        const containerDom = this.getDomElement();
+        const rows = containerDom.querySelectorAll('tbody tr');
+
+        // If no filters exist, show all rows
+        if (!this.tableFilters || this.tableFilters.length === 0) {
+            rows.forEach(row => row.style.display = '');
+            return;
+        }
+
+        rows.forEach((row, rowIndex) => {
+            let shouldShow = true;
+
+            // Check each filter
+            this.tableFilters.forEach(filter => {
+                const safeFieldName = filter.field.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                // Try both dataset and getAttribute methods
+                let fieldValue = row.dataset[`field${safeFieldName}`];
+                if (fieldValue === undefined) {
+                    fieldValue = row.getAttribute(`data-field${safeFieldName}`);
+                }
+                
+                // Get checked values for this filter
+                const checkedCheckboxes = containerDom.querySelectorAll(
+                    `.table-filter-checkbox[data-filter-field="${filter.field}"]:checked`
+                );
+                const checkedValues = Array.from(checkedCheckboxes).map(cb => cb.dataset.filterValue);
+
+                // If no checkboxes are checked for this filter, hide the row
+                if (checkedValues.length === 0) {
+                    shouldShow = false;
+                    return;
+                }
+
+                // If this row's field value is not in the checked values, hide the row
+                if (!checkedValues.includes(fieldValue)) {
+                    shouldShow = false;
+                    return;
+                }
+            });
+
+            row.style.display = shouldShow ? '' : 'none';
+        });
+    }
+
+    /**
+     * Render table rows from events data
+     * @param {Array} allEvents All events to render
+     * @param {Array} colorRules Color rules for rows
+     * @param {Array} tableColumns Table column definitions
+     * @param {HTMLElement} containerDom Container DOM element
+     */
+    _renderTableRows(allEvents, colorRules, tableColumns, containerDom) {
+        let rowsHtml = '';
+
+        allEvents.forEach(enrichedEvent => {
+            const event = enrichedEvent;
+
+            // Apply color rules
+            let rowColor = "";
+            for (const rule of (colorRules || [])) {
+                let fieldValue = {
+                    "value": event.value,
+                    "tag": event.tag,
+                    "time": event.timestamp,
+                    "additional_info": event.additional_info,
+                    "event_name": event.name,
+                    "index": event.eventIndex
+                }[rule.event_field];
+
+                if (EventConditions.evaluate(fieldValue, rule.condition, rule.value)) {
+                    rowColor = 'table-' + rule.color;
+                }
             }
+
+            // Build data attributes for filtering
+            let dataAttributes = '';
+            if (this.tableFilters) {
+                this.tableFilters.forEach(filter => {
+                    const safeFieldName = filter.field.replace(/[^a-zA-Z0-9]/g, '_');
+                    const fieldValue = enrichedEvent.fieldValues[filter.field];
+                    
+                    // Convert to string, but handle undefined/null properly
+                    let stringValue = '';
+                    if (fieldValue !== undefined && fieldValue !== null) {
+                        stringValue = fieldValue.toString();
+                    }
+                    
+                    // Escape HTML attribute value
+                    const escapedFieldValue = stringValue.replace(/"/g, '&quot;');
+                    dataAttributes += ` data-field${safeFieldName}="${escapedFieldValue}"`;
+                });
+            }
+
+            // Build row HTML
+            let rowHtml = `<tr class="${rowColor}"${dataAttributes}>\n`;
+            for (const col of tableColumns) {
+                if (col.event_field === "value") {
+                    rowHtml += `<td>${event.value}</td>\n`;
+                } else if (col.event_field === "tag") {
+                    rowHtml += `<td>${event.tag}</td>\n`;
+                } else if (col.event_field === "time") {
+                    rowHtml += `<td>${event.timestamp.replace('T', ' ').replace('Z', '')}</td>\n`;
+                } else if (col.event_field === "additional_info") {
+                    rowHtml += `<td>${event.additional_info || ""}</td>\n`;
+                } else if (col.event_field === "event_name") {
+                    rowHtml += `<td>${event.name}</td>\n`;
+                } else if (col.event_field === "index") {
+                    rowHtml += `<td>${event.eventIndex}</td>\n`;
+                }
+            }
+            rowHtml += "</tr>\n";
+            
+            rowsHtml += rowHtml;
+        });
+
+        containerDom.querySelector("tbody").innerHTML = rowsHtml;
+
+        // Apply filters if they exist
+        if (this.tableFilters && this.tableFilters.length > 0) {
+            // Small delay to ensure DOM is updated
+            setTimeout(() => this._applyTableFilters(), 1);
         }
     }
 }
@@ -2051,11 +2239,12 @@ const WidgetsFactory = {
      * @param {number} maxRows - Maximum number of rows to show in the table.
      * @param {array<dict>} colorRules - Optional list of color rules to apply to table rows. Each rule is {field: string, operator: string, value: any, color: string}.
      * @param {string} sliceFrom - Whether to take rows from start or end of data ("start" or "end").
+     * @param {array<dict>|null} tableFilters - Optional table filters. Each filter is {field: string, choices: array<string>|number|null}.
      * @returns {Widget} The new widget instance.
      */
-    createTable: function(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules = null, sliceFrom = "start")
+    createTable: function(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules = null, sliceFrom = "start", tableFilters = null)
     {
-        return this.register(new TableWidget(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules, sliceFrom));
+        return this.register(new TableWidget(title, description, widthColumns, height, dataSources, tableColumns, maxRows, colorRules, sliceFrom, tableFilters));
     },
 
     /**

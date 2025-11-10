@@ -971,6 +971,10 @@ PUSH_EVENTS_API_CONFIG = {
 - Replaced calling `crypto.subtle.digest`, which is not always available, to using a function implemented in utils.
 - Added events cleanup stats to data collectors in admin panel.
 
+## 1.0.4 [WIP]
+
+- Added filters to table widget.
+
 # License
 
 `Dashium` is free to use under the MIT license.

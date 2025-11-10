@@ -10,7 +10,7 @@ import importlib.util
 import os
 import sys
 from pathlib import Path
-from typing import List, Any
+from typing import List
 
 print(r"""
   _____            _     _                 
@@ -18,7 +18,7 @@ print(r"""
  | |  | | __ _ ___| |__  _ _   _ _ __ ___  
  | |  | |/ _` / __| '_ \| | | | | '_ ` _ \ 
  | |__| | (_| \__ \ | | | | |_| | | | | | |
- |_____/ \__,_|___/_| |_|_|\__,_|_| |_| |_| v1.0.3
+ |_____/ \__,_|___/_| |_|_|\__,_|_| |_| |_| v1.0.4
                                            
    ^ by Ronen Ness, 2025       
 """)

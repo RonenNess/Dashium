@@ -252,7 +252,7 @@
                 {
                     // lines graph widget
                     foundValidType = true;
-                    inst = WidgetsFactory.createTable("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, {{ widget.table_columns }}, {{ widget.max_rows|10 }}, {{ widget.color_rules|null }}, `{{ widget.slice_from|start }}`);
+                    inst = WidgetsFactory.createTable("{{ widget.title }}", "{{ widget.description }}", {{widget.columns|12}}, {{ widget.height|1 }}, {{ widget.data_sources }}, {{ widget.table_columns }}, {{ widget.max_rows|10 }}, {{ widget.color_rules|null }}, `{{ widget.slice_from|start }}`, {{ widget.filters|null }});
                     if (timeAggSettings) { inst.addTimeAggregation(timeAggSettings.startingValue, timeAggSettings.allowSelection, timeAggSettings.aggregationFunction, timeAggSettings.choices); }
                 }
                 {% endif %}
