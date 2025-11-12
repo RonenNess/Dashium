@@ -149,7 +149,8 @@ web_server_instance = web_server.WebServer(
     require_auth=config.AUTHENTICATION_ENABLED,
     web_assets_dir=Path(static_files_dir),
     config_dict=config.WEB_VIEWS,
-    ssl_config=ssl_config
+    ssl_config=ssl_config,
+    app_path=app_dir
 )
 
 # init auth manager

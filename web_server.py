@@ -79,6 +79,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Get configuration from class attributes (set by factory function)
         self.config : Dict = getattr(self.__class__, 'config', None) # type: ignore
         self.web_assets_dir : Path = getattr(self.__class__, 'web_assets_dir', None) # type: ignore
+        self.app_path : Optional[Path] = getattr(self.__class__, 'app_path', None) # type: ignore
         self.template_engine : ITemplateEngine = getattr(self.__class__, 'template_engine', None) # type: ignore
         self.views : List[View] = getattr(self.__class__, 'views', None) # type: ignore
         self.get_apis : List[API] = getattr(self.__class__, 'get_apis', None) # type: ignore
@@ -453,24 +454,65 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # If path is root, serve index.html
         if path == '/' or path == '':
             path = '/index.html'
+
+        # prevent path traversal
+        path_parts = Path(path).parts
+        if not path.startswith('/static/') or '..' in path_parts:
+            self.send_error(400, "Bad request")
+            log.warning(f"Path traversal attempt detected: {path}")
+            return
         
         # Remove leading slash for file system path
-        file_path = self.web_assets_dir / path.lstrip('/')
+        relative_path = path.lstrip('/')
+
+        # Try app path first if it exists
+        file_to_serve = None
+        if self.app_path:
+            app_file = self.app_path / self.web_assets_dir.parts[-1] / relative_path
+            if app_file.exists() and app_file.is_file():
+                file_to_serve = app_file
         
-        try:
-            if file_path.exists() and file_path.is_file():
-                super().do_GET()
+        # If not found in app path, try web assets
+        if file_to_serve is None:
+            web_file = self.web_assets_dir / relative_path
+            if web_file.exists() and web_file.is_file():
+                file_to_serve = web_file
+        
+        # Serve the file if found
+        if file_to_serve:
+            try:
+                self._serve_file(file_to_serve)
+            except Exception as e:
+                self.send_error(500, f"Internal server error: {str(e)}")
+                log.error(f"Error serving file {file_to_serve}: {e}")
+        else:
+            # File not found, serve 404
+            self.send_error(404, f"File not found: {path}")
+            log.warning(f"File not found: {relative_path}")
 
-            else:
-                # File not found, serve 404
-                self.send_error(404, f"File not found: {path}")
-                log.warning(f"File not found: {file_path}")
 
-        except Exception as e:
-            self.send_error(500, f"Internal server error: {str(e)}")
-            log.error(f"Error serving file {file_path}: {e}")
+    def _serve_file(self, file_path: Path) -> None:
+        """
+        Serve a specific file using parent class utilities
+        """
+        # Get file stats
+        stat = file_path.stat()
+        
+        # Get MIME type
+        ctype = self.guess_type(str(file_path))
+        
+        # Send headers
+        self.send_response(200)
+        self.send_header("Content-type", ctype)
+        self.send_header("Content-Length", str(stat.st_size))
+        self.send_header("Last-Modified", self.date_time_string(stat.st_mtime))
+        self.end_headers()
+        
+        # Send file content
+        with open(file_path, 'rb') as f:
+            self.copyfile(f, self.wfile)
     
-    
+
     def get_cookies(self) -> Dict[str, str]:
         """
         Extract cookies from the request headers.
@@ -488,6 +530,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     cookies[name] = value
         return cookies
 
+
     def delete_cookie(self, name: str, path: str = "/") -> None:
         """
         Delete a cookie by setting it to expire in the past.
@@ -502,6 +545,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         # Set cookie with past expiration date to delete it
         cookie_str = f"{name}=; Path={path}; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
         self.send_header('Set-Cookie', cookie_str)
+
 
     def render_template(self, template_name: str, context: Optional[Dict[str, Any]] = None, extra_headers: Optional[FunctionType] = None) -> None:
         """
@@ -540,7 +584,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, f"Template rendering error: {str(e)}")
 
 
-def create_handler_with_config(config_dict: Dict[str, Any], web_assets_dir: Union[str, Path], template_engine: Optional[ITemplateEngine], views_list: List[Any], get_apis_list: List[Any], post_apis_list: List[Any], is_auth_required: bool) -> type:
+def create_handler_with_config(config_dict: Dict[str, Any], web_assets_dir: Union[str, Path], template_engine: Optional[ITemplateEngine], views_list: List[Any], get_apis_list: List[Any], post_apis_list: List[Any], is_auth_required: bool, app_path: Optional[Union[str, Path]] = None) -> type:
     """
     Factory function to create a CustomHTTPRequestHandler with custom configuration.
     
@@ -552,6 +596,7 @@ def create_handler_with_config(config_dict: Dict[str, Any], web_assets_dir: Unio
         get_apis_list (List[Any]): GET apis list. Can start empty and fill in later
         post_apis_list (List[Any]): POST apis list. Can start empty and fill in later
         is_auth_required (bool): Whether to require authentication
+        app_path (Optional[Union[str, Path]]): Application-specific path to check first for static files
 
     Returns:
         type: A configured CustomHTTPRequestHandler class
@@ -564,12 +609,21 @@ def create_handler_with_config(config_dict: Dict[str, Any], web_assets_dir: Unio
     else:
         assets_dir = web_assets_dir
     
+    # determine app path
+    app_dir = None
+    if app_path is not None:
+        if isinstance(app_path, str):
+            app_dir = Path(app_path)
+        else:
+            app_dir = app_path
+    
     # default template engine
     template_eng = template_engine or create_template_engine(assets_dir / "templates")
 
     class ConfiguredHandler(CustomHTTPRequestHandler):
         config: Dict[str, Any] = config_dict
         web_assets_dir: Path = assets_dir
+        app_path: Optional[Path] = app_dir
         template_engine: ITemplateEngine = template_eng
         views: List[Any] = views_list
         get_apis: List[Any] = get_apis_list
@@ -582,7 +636,7 @@ def create_handler_with_config(config_dict: Dict[str, Any], web_assets_dir: Unio
 class WebServer:
     """Serve the web application and static files."""
     
-    def __init__(self, host: str = 'localhost', port: int = 8000, require_auth: bool = False, config_dict: Optional[Dict[str, Any]] = None, web_assets_dir: Optional[Path] = None, template_engine: Optional[ITemplateEngine] = None, ssl_config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, host: str = 'localhost', port: int = 8000, require_auth: bool = False, config_dict: Optional[Dict[str, Any]] = None, web_assets_dir: Optional[Path] = None, template_engine: Optional[ITemplateEngine] = None, ssl_config: Optional[Dict[str, Any]] = None, app_path: Optional[Union[str, Path]] = None) -> None:
         """
         Initialize the WebServer.
         
@@ -594,6 +648,7 @@ class WebServer:
             web_assets_dir (Optional[Path]): Path to web assets directory
             template_engine (Optional[ITemplateEngine]): Custom template engine instance
             ssl_config (Optional[Dict[str, Any]]): SSL configuration dictionary
+            app_path (Optional[Union[str, Path]]): Application-specific path to check first for static files
             
         Returns:
             None
@@ -609,6 +664,7 @@ class WebServer:
         self.post_apis = []
         self.auth_required = require_auth
         self.ssl_config = ssl_config or dict()
+        self.app_path = Path(app_path) if app_path else None
 
     def start(self) -> None:
         """
@@ -626,7 +682,8 @@ class WebServer:
                 views_list=self.views,
                 get_apis_list=self.get_apis,
                 post_apis_list=self.post_apis,
-                is_auth_required = self.auth_required
+                is_auth_required = self.auth_required,
+                app_path=self.app_path
             )
             
             # Create the server with threading support

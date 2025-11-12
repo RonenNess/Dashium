@@ -456,7 +456,11 @@ The following configuration options are available under `PUSH_EVENTS_API_CONFIG`
 
 **Security Note:** Always change the default API key to a secure, randomly generated string before deploying to production.
 
+### Override Static Files
 
+If your application directory includes a custom `web_assets/` folder, the `Dashium` engine will prioritize loading static files from that location before falling back to the base `web_assets/` directory.
+
+This allows you to customize your website's CSS files or override default assets such as the icon and favicon.
 
 # Widgets
 
@@ -762,6 +766,9 @@ Displays tabular data with optional sorting, coloring, and pagination.
     "height": 0,                # Auto height
     "max_rows": 1000,           # Maximum rows to display
     "slice_from": "end",        # "start" or "end" - where to slice data
+    "filters": [                # optional client-side filters, in this example by 'Severity' field
+        { "field": "Severity" }
+    ],
     "table_columns": [
         {"title": "#", "event_field": "index"},
         {"title": "Severity", "event_field": "tag"},
@@ -975,6 +982,8 @@ PUSH_EVENTS_API_CONFIG = {
 
 - Added filters to table widget.
 - Fixed broken `tags` filter in events fetching API.
+- Added the option to serve static files from application path, meaning its now possible to override icons, css, and assets.
+- Added validation that the web server will not be able to serve files from outside the app.
 
 
 # License
