@@ -81,7 +81,7 @@ def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) 
             if query_params.get("last_unique_by_tag", "false").lower() == "true":
                 events = db.get_latest_events_by_tag(
                     name=name,
-                    tags=query_params.get("tag")
+                    tags=query_params.get("tags")
                 )
                 api_stats_entry.update_times((datetime.now() - start_time).total_seconds() * 1000)
                 return events, 200
@@ -89,7 +89,7 @@ def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) 
             # fetch events based on other parameters
             events = db.get_events(
                 name=name,
-                tags=query_params.get("tag"),
+                tags=query_params.get("tags"),
                 max_age_days=int(query_params.get("max_age_days", 0)),
                 max_results=int(query_params.get("max_results", 0))
             )
@@ -109,7 +109,7 @@ def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) 
 
     # POST API to add events (only if enabled in config)
     if config.PUSH_EVENTS_API_CONFIG.get("enable", False):
-        def add_events_api(data: Dict[str, Any], headers: Dict[str, str]) -> Tuple[Dict[str, Any], int]:
+        def push_events_api(data: Dict[str, Any], headers: Dict[str, str]) -> Tuple[Dict[str, Any], int]:
             """
             Add events to the database via POST request.
             
@@ -198,4 +198,4 @@ def register_web_apis(db: db.DatabaseManager, web_server: web_server.WebServer) 
 
         # Register the POST API endpoint
         endpoint_url = config.PUSH_EVENTS_API_CONFIG.get("url", "/api/events")
-        web_server.register_post_api(urls=[endpoint_url], callback=add_events_api)
+        web_server.register_post_api(urls=[endpoint_url], callback=push_events_api)

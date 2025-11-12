@@ -974,6 +974,8 @@ PUSH_EVENTS_API_CONFIG = {
 ## 1.0.4 [WIP]
 
 - Added filters to table widget.
+- Fixed broken `tags` filter in events fetching API.
+
 
 # License
 
